@@ -1,13 +1,17 @@
 import cv2
 import numpy as np
-import tensorflow as tf
 from tensorflow.keras.models import load_model
 import os
 
 # Load the trained model
-model = load_model("models/crop_disease_model.h5")
+model_path = "models/crop_disease_model.h5"
+if not os.path.exists(model_path):
+    raise FileNotFoundError(f"Model file not found at: {model_path}")
 
-# Load class names (update if hardcoded or stored elsewhere)
+model = load_model(model_path)
+print("✅ Model loaded successfully.")
+
+# Class names
 class_names = [
     'Pepper__bell___Bacterial_spot',
     'Pepper__bell___healthy',
@@ -28,23 +32,39 @@ class_names = [
 
 # Function to load and preprocess image
 def preprocess_image(image_path):
+    if not os.path.exists(image_path):
+        raise FileNotFoundError(f"Image file not found at: {image_path}")
+
     img = cv2.imread(image_path)
     if img is None:
-        raise ValueError(f"Image not found: {image_path}")
+        raise ValueError("Failed to load image. Make sure it's a valid image file.")
+
+    print(f"📸 Loaded image: {image_path}")
+    print(f"Image shape before resize: {img.shape}")
+
     img = cv2.resize(img, (128, 128))
-    img = img / 255.0  # Normalize
+    img = img / 255.0  # Normalize to [0,1]
     img = np.expand_dims(img, axis=0)  # Add batch dimension
+
+    print(f"Image shape after preprocess: {img.shape}")
     return img
 
-# Path to the image for prediction
-image_path = "predict6.jpg"  
+# === Change this to your image file name ===
+image_path = "predict6.jpg"
 
-# Predict
+# Run prediction
 try:
     image = preprocess_image(image_path)
     prediction = model.predict(image)
-    predicted_class = class_names[np.argmax(prediction)]
 
-    print(f"Predicted disease class: {predicted_class}")
+    predicted_index = np.argmax(prediction)
+    predicted_class = class_names[predicted_index]
+    confidence = float(prediction[0][predicted_index])
+
+    print("\n🎯 Prediction Result:")
+    print(f"Class: {predicted_class}")
+    print(f"Confidence: {confidence:.2%}")
+    print(f"Raw prediction vector: {prediction}")
+
 except Exception as e:
-    print(f"Error: {e}")
+    print(f"❌ Error: {e}")
